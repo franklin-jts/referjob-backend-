@@ -29,7 +29,6 @@ def fmt(post: dict) -> dict:
     # serialize comments
     post["comments"] = [fmt_comment(c) for c in post.get("comments", [])]
     return post
-    return post
 
 
 @router.get("/user/{user_id}")

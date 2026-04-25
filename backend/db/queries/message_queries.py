@@ -1,7 +1,7 @@
 """
 MongoDB queries for messages and chats collections.
 """
-from database import messages_col, chats_col
+import database
 from bson import ObjectId
 from datetime import datetime
 
@@ -23,10 +23,10 @@ async def send_message(sender_id: ObjectId, receiver_id: ObjectId, text: str) ->
         "read": False,
         "created_at": datetime.utcnow(),
     }
-    result = await messages_col.insert_one(msg_doc)
+    result = await database.messages_col.insert_one(msg_doc)
 
     # upsert the chat summary document
-    await chats_col.update_one(
+    await database.chats_col.update_one(
         {"chat_id": chat_id},
         {
             "$set": {
@@ -44,18 +44,18 @@ async def send_message(sender_id: ObjectId, receiver_id: ObjectId, text: str) ->
 async def get_conversation(user_a: ObjectId, user_b: ObjectId) -> list:
     """Return all messages between two users, oldest first."""
     chat_id = _chat_id(user_a, user_b)
-    cursor = messages_col.find({"chat_id": chat_id}).sort("created_at", 1)
+    cursor = database.messages_col.find({"chat_id": chat_id}).sort("created_at", 1)
     return [m async for m in cursor]
 
 
 async def mark_messages_read(user_a: ObjectId, user_b: ObjectId):
     """Mark all unread messages sent TO user_a as read."""
     chat_id = _chat_id(user_a, user_b)
-    await messages_col.update_many(
+    await database.messages_col.update_many(
         {"chat_id": chat_id, "receiver_id": user_a, "read": False},
         {"$set": {"read": True}}
     )
-    await chats_col.update_one(
+    await database.chats_col.update_one(
         {"chat_id": chat_id},
         {"$set": {"unread_count": 0}}
     )
@@ -69,7 +69,6 @@ async def get_user_chats(user_id: ObjectId) -> list:
     pipeline = [
         {"$match": {"participants": user_id}},
         {"$sort": {"updated_at": -1}},
-        # figure out the other participant
         {"$addFields": {
             "other_user_id": {
                 "$arrayElemAt": [
@@ -82,7 +81,6 @@ async def get_user_chats(user_id: ObjectId) -> list:
                 ]
             }
         }},
-        # join their profile
         {"$lookup": {
             "from": "users",
             "localField": "other_user_id",
@@ -91,16 +89,10 @@ async def get_user_chats(user_id: ObjectId) -> list:
         }},
         {"$unwind": {"path": "$other_user", "preserveNullAndEmptyArrays": True}},
         {"$project": {
-            "chat_id": 1,
-            "last_message": 1,
-            "unread_count": 1,
-            "updated_at": 1,
-            "other_user._id": 1,
-            "other_user.name": 1,
-            "other_user.avatar": 1,
-            "other_user.title": 1,
-            "other_user.company": 1,
+            "chat_id": 1, "last_message": 1, "unread_count": 1, "updated_at": 1,
+            "other_user._id": 1, "other_user.name": 1,
+            "other_user.avatar": 1, "other_user.title": 1, "other_user.company": 1,
         }}
     ]
-    cursor = chats_col.aggregate(pipeline)
+    cursor = database.chats_col.aggregate(pipeline)
     return [c async for c in cursor]

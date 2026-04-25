@@ -1,19 +1,19 @@
 """
 MongoDB queries for the referrals collection.
 """
-from database import referrals_col
+import database
 from bson import ObjectId
 from datetime import datetime
 
 
 async def create_referral(data: dict) -> str:
-    result = await referrals_col.insert_one(data)
+    result = await database.referrals_col.insert_one(data)
     return str(result.inserted_id)
 
 
 async def find_pending_referral(requester_id: ObjectId, referrer_id: str, post_id: str):
     """Check if a pending request already exists to avoid duplicates."""
-    return await referrals_col.find_one({
+    return await database.referrals_col.find_one({
         "requester_id": requester_id,
         "referrer_id": ObjectId(referrer_id),
         "post_id": ObjectId(post_id),
@@ -22,7 +22,7 @@ async def find_pending_referral(requester_id: ObjectId, referrer_id: str, post_i
 
 
 async def get_referral_by_id(referral_id: str):
-    return await referrals_col.find_one({"_id": ObjectId(referral_id)})
+    return await database.referrals_col.find_one({"_id": ObjectId(referral_id)})
 
 
 async def get_my_requests(requester_id: ObjectId) -> list:
@@ -50,7 +50,7 @@ async def get_my_requests(requester_id: ObjectId) -> list:
             "referrer.name": 1, "referrer.avatar": 1, "referrer.company": 1,
         }}
     ]
-    cursor = referrals_col.aggregate(pipeline)
+    cursor = database.referrals_col.aggregate(pipeline)
     return [r async for r in cursor]
 
 
@@ -79,12 +79,12 @@ async def get_my_referrals(referrer_id: ObjectId) -> list:
             "requester.name": 1, "requester.avatar": 1, "requester.title": 1,
         }}
     ]
-    cursor = referrals_col.aggregate(pipeline)
+    cursor = database.referrals_col.aggregate(pipeline)
     return [r async for r in cursor]
 
 
 async def update_referral_status(referral_id: str, status: str):
-    await referrals_col.update_one(
+    await database.referrals_col.update_one(
         {"_id": ObjectId(referral_id)},
         {"$set": {"status": status, "updated_at": datetime.utcnow()}}
     )

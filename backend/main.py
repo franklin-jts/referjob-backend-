@@ -1,11 +1,24 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from database import connect_db, close_db
 from routes import auth, users, posts, referrals, messages, notifications
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ── Startup ──────────────────────────────────────────
+    await connect_db()
+    yield
+    # ── Shutdown ─────────────────────────────────────────
+    await close_db()
+
 
 app = FastAPI(
     title="Job Referral App API",
     description="Backend API for the Job Referral social platform",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
