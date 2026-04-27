@@ -67,6 +67,14 @@ async def delete_post(post_id: str):
     await database.posts_col.delete_one({"_id": ObjectId(post_id)})
 
 
+async def update_post(post_id: str, updates: dict):
+    await database.posts_col.update_one(
+        {"_id": ObjectId(post_id)},
+        {"$set": updates}
+    )
+    return await get_post_by_id(post_id)
+
+
 async def toggle_like(post_id: str, user_id: ObjectId) -> bool:
     """Returns True if liked, False if unliked."""
     post = await database.posts_col.find_one(

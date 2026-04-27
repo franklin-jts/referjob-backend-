@@ -1,13 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends
-from models.post import PostCreate, CommentCreate
+from models.post import PostCreate, PostUpdate, CommentCreate
 from middleware.auth import get_current_user
 from db.queries.post_queries import (
     create_post, get_feed, get_post_by_id,
-    delete_post, toggle_like, add_comment, get_posts_by_user
+    delete_post, update_post, toggle_like, add_comment, get_posts_by_user
 )
 from db.queries.notification_queries import create_notification
 from bson import ObjectId
 from datetime import datetime
+import database
 
 router = APIRouter(prefix="/api/posts", tags=["Posts"])
 
@@ -66,6 +67,18 @@ async def get_one(post_id: str, current_user=Depends(get_current_user)):
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return fmt(post)
+
+
+@router.put("/{post_id}")
+async def update(post_id: str, body: PostUpdate, current_user=Depends(get_current_user)):
+    post = await get_post_by_id(post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if str(post["user_id"]) != str(current_user["_id"]):
+        raise HTTPException(status_code=403, detail="Not your post")
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    updated = await update_post(post_id, updates)
+    return fmt(updated)
 
 
 @router.delete("/{post_id}")

@@ -35,5 +35,18 @@ class PostOut(BaseModel):
     created_at: datetime
 
 
+class PostUpdate(BaseModel):
+    type: Optional[str] = None
+    job_title: Optional[str] = None
+    company: Optional[str] = None
+    company_logo: Optional[str] = None
+    location: Optional[str] = None
+    salary: Optional[str] = None
+    experience: Optional[str] = None
+    skills: Optional[List[str]] = None
+    description: Optional[str] = None
+    can_refer: Optional[bool] = None
+
+
 class CommentCreate(BaseModel):
     text: str

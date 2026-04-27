@@ -17,6 +17,7 @@ messages_col      = None
 chats_col         = None
 notifications_col = None
 referrals_col     = None
+stories_col       = None
 
 
 async def connect_db():
@@ -29,7 +30,7 @@ async def connect_db():
     """
     global client, db
     global users_col, posts_col, messages_col
-    global chats_col, notifications_col, referrals_col
+    global chats_col, notifications_col, referrals_col, stories_col
 
     client = AsyncIOMotorClient(MONGO_URI)
 
@@ -46,6 +47,7 @@ async def connect_db():
     chats_col         = db["chats"]
     notifications_col = db["notifications"]
     referrals_col     = db["referrals"]
+    stories_col       = db["stories"]
 
     # Create indexes
     await create_indexes()
@@ -92,3 +94,6 @@ async def create_indexes():
     # ── Notifications ──────────────────────────────────────
     await notifications_col.create_index([("to_user_id", 1), ("read", 1)])
     await notifications_col.create_index([("created_at", -1)])
+
+    # ── Stories ────────────────────────────────────────────
+    await stories_col.create_index([("created_at", -1)])

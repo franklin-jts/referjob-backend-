@@ -1,8 +1,10 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from database import connect_db, close_db
-from routes import auth, users, posts, referrals, messages, notifications
+from routes import auth, users, posts, referrals, messages, notifications, stories, upload
 
 
 @asynccontextmanager
@@ -29,12 +31,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(posts.router)
 app.include_router(referrals.router)
 app.include_router(messages.router)
 app.include_router(notifications.router)
+app.include_router(stories.router)
+app.include_router(upload.router)
 
 
 @app.get("/")
