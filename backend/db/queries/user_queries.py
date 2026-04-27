@@ -5,6 +5,28 @@ import database
 from bson import ObjectId
 
 
+async def get_next_user_number() -> int:
+    """Auto-increment counter for regular user IDs (1, 2, 3 ...)"""
+    result = await database.db["counters"].find_one_and_update(
+        {"_id": "user_seq"},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    return result["seq"]
+
+
+async def get_next_admin_number() -> str:
+    """Auto-increment counter for admin IDs (jts001, jts002 ...)"""
+    result = await database.db["counters"].find_one_and_update(
+        {"_id": "admin_seq"},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    return f"jts{result['seq']:03d}"
+
+
 async def create_user(data: dict) -> str:
     result = await database.users_col.insert_one(data)
     return str(result.inserted_id)

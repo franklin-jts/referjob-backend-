@@ -11,7 +11,8 @@ from middleware.auth import create_token, get_current_user
 from db.queries.user_queries import (
     find_user_by_email, find_user_by_mobile,
     find_user_by_email_or_mobile, find_user_by_username,
-    find_user_by_reset_token, create_user, update_user
+    find_user_by_reset_token, create_user, update_user,
+    get_next_user_number, get_next_admin_number
 )
 from datetime import datetime, timedelta
 
@@ -54,6 +55,8 @@ def _fmt_user(user: dict) -> dict:
     user.pop("reset_token", None)
     user.pop("reset_token_expiry", None)
     user["connection_ids"] = [str(c) for c in user.get("connection_ids", [])]
+    # expose readable user_id (1, 2, 3 for users / jts001 for admins)
+    user.setdefault("user_id", user["id"])
     return user
 
 
@@ -130,6 +133,8 @@ async def register(body: UserRegister):
         "referral_given":    0,
         "referral_received": 0,
         "connection_ids":    [],
+        "role":              "user",
+        "user_id":           await get_next_user_number(),
         "created_at":        datetime.utcnow(),
     }
 
@@ -226,3 +231,59 @@ async def reset_password(body: ResetPasswordRequest):
 async def me(current_user=Depends(get_current_user)):
     """Validate token on app startup and return user profile."""
     return _fmt_user(current_user)
+
+
+# ── Admin Register ────────────────────────────────────────────────────────────
+
+ADMIN_SECRET = "jts-admin-2024"   # change this in production / move to .env
+
+@router.post("/admin/register", status_code=201)
+async def admin_register(body: UserRegister, secret: str):
+    """
+    Register an admin user. Requires secret key as query param.
+    POST /api/auth/admin/register?secret=jts-admin-2024
+    Assigns admin_id like jts001, jts002 ...
+    """
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid admin secret")
+
+    if await find_user_by_email(body.email):
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    username = body.username or _generate_username(body.name)
+    while await find_user_by_username(username):
+        username = _generate_username(body.name)
+
+    admin_id = await get_next_admin_number()
+
+    user_doc = {
+        "name":       body.name,
+        "email":      body.email,
+        "password":   _hash(body.password),
+        "username":   username,
+        "mobile":     body.mobile or "",
+        "title":      body.title or "Admin",
+        "company":    body.company or "JTS",
+        "location":   body.location or "",
+        "bio":        body.bio or "",
+        "skills":     body.skills or [],
+        "avatar":     body.avatar or f"https://i.pravatar.cc/150?u={body.email}",
+        "connections":       0,
+        "referral_given":    0,
+        "referral_received": 0,
+        "connection_ids":    [],
+        "role":              "admin",
+        "user_id":           admin_id,
+        "created_at":        datetime.utcnow(),
+    }
+
+    mongo_id = await create_user(user_doc)
+    token    = create_token(mongo_id)
+
+    return {
+        "token":    token,
+        "user_id":  admin_id,
+        "username": username,
+        "name":     body.name,
+        "role":     "admin",
+    }

@@ -27,8 +27,8 @@ async def get_feed(skip: int = 0, limit: int = 20) -> list:
         {"$project": {
             "_id": 1, "type": 1, "company": 1, "company_logo": 1,
             "job_title": 1, "location": 1, "salary": 1, "experience": 1,
-            "skills": 1, "description": 1, "likes": 1, "referrals": 1,
-            "can_refer": 1, "created_at": 1, "comments_count": 1,
+            "skills": 1, "description": 1, "likes": 1, "liked_by": 1,
+            "referrals": 1, "can_refer": 1, "created_at": 1, "comments_count": 1,
             "author.name": 1, "author.avatar": 1,
             "author.title": 1, "author.company": 1,
         }}
@@ -52,7 +52,7 @@ async def get_post_by_id(post_id: str):
             "company": 1, "company_logo": 1, "job_title": 1,
             "location": 1, "salary": 1, "experience": 1,
             "skills": 1, "description": 1, "likes": 1,
-            "comments": 1, "comments_count": 1,
+            "liked_by": 1, "comments": 1, "comments_count": 1,
             "referrals": 1, "can_refer": 1, "created_at": 1,
             "author.name": 1, "author.avatar": 1,
             "author.title": 1, "author.company": 1, "author._id": 1,
@@ -77,9 +77,12 @@ async def update_post(post_id: str, updates: dict):
 
 async def toggle_like(post_id: str, user_id: ObjectId) -> bool:
     """Returns True if liked, False if unliked."""
+    # fetch directly from collection (not via aggregation) to get liked_by
     post = await database.posts_col.find_one(
         {"_id": ObjectId(post_id)}, {"liked_by": 1}
     )
+    if not post:
+        return False
     already_liked = user_id in post.get("liked_by", [])
 
     if already_liked:
