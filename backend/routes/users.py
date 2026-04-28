@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from models.user import UserUpdate
+from models.user import UserUpdate, UserPreferences
 from middleware.auth import get_current_user
 from db.queries.user_queries import (
     find_user_by_id, update_user, search_users,
@@ -17,6 +17,26 @@ def fmt(user: dict) -> dict:
     return user
 
 
+@router.get("/me/completion")
+async def profile_completion(current_user=Depends(get_current_user)):
+    fields = {
+        "name":       bool(current_user.get("name")),
+        "title":      bool(current_user.get("title")),
+        "company":    bool(current_user.get("company")),
+        "location":   bool(current_user.get("location")),
+        "bio":        bool(current_user.get("bio")),
+        "skills":     bool(current_user.get("skills")),
+        "experience": bool(current_user.get("experience")),
+        "education":  bool(current_user.get("education")),
+        "avatar":     bool(current_user.get("avatar")),
+        "cv_url":     bool(current_user.get("cv_url")),
+    }
+    completed = [k for k, v in fields.items() if v]
+    missing   = [k for k, v in fields.items() if not v]
+    score     = int(len(completed) / len(fields) * 100)
+    return {"score": score, "completed": completed, "missing": missing}
+
+
 @router.get("/me")
 async def get_me(current_user=Depends(get_current_user)):
     return fmt(current_user)
@@ -25,6 +45,13 @@ async def get_me(current_user=Depends(get_current_user)):
 @router.put("/me")
 async def update_me(body: UserUpdate, current_user=Depends(get_current_user)):
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    updated = await update_user(str(current_user["_id"]), updates)
+    return fmt(updated)
+
+
+@router.put("/me/preferences")
+async def update_preferences(body: UserPreferences, current_user=Depends(get_current_user)):
+    updates = {f"preferences.{k}": v for k, v in body.model_dump().items() if v is not None}
     updated = await update_user(str(current_user["_id"]), updates)
     return fmt(updated)
 

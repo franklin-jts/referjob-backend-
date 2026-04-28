@@ -55,8 +55,17 @@ def _fmt_user(user: dict) -> dict:
     user.pop("reset_token", None)
     user.pop("reset_token_expiry", None)
     user["connection_ids"] = [str(c) for c in user.get("connection_ids", [])]
-    # expose readable user_id (1, 2, 3 for users / jts001 for admins)
     user.setdefault("user_id", user["id"])
+    # always return preferences with defaults so app never gets null
+    prefs = user.get("preferences") or {}
+    user["preferences"] = {
+        "push_notifications": prefs.get("push_notifications", True),
+        "email_alerts":       prefs.get("email_alerts",       True),
+        "referral_alerts":    prefs.get("referral_alerts",    True),
+        "job_alerts":         prefs.get("job_alerts",         True),
+        "profile_visible":    prefs.get("profile_visible",    True),
+        "show_connections":   prefs.get("show_connections",   True),
+    }
     return user
 
 

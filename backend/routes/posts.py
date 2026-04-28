@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from models.post import PostCreate, PostUpdate, CommentCreate
-from middleware.auth import get_current_user
+from middleware.auth import get_current_user, require_admin
 from db.queries.post_queries import (
     create_post, get_feed, get_post_by_id,
     delete_post, update_post, toggle_like, add_comment, get_posts_by_user
@@ -82,7 +82,7 @@ async def update(post_id: str, body: PostUpdate, current_user=Depends(get_curren
 
 
 @router.delete("/{post_id}")
-async def remove(post_id: str, current_user=Depends(get_current_user)):
+async def remove(post_id: str, current_user=Depends(require_admin)):
     post = await get_post_by_id(post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")

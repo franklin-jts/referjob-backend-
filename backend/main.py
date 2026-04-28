@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from database import connect_db, close_db
-from routes import auth, users, posts, referrals, messages, notifications, stories, upload
+from routes import auth, users, posts, referrals, messages, notifications, stories, upload, skills
 
 
 @asynccontextmanager
@@ -42,6 +42,7 @@ app.include_router(messages.router)
 app.include_router(notifications.router)
 app.include_router(stories.router)
 app.include_router(upload.router)
+app.include_router(skills.router)
 
 
 @app.get("/")
